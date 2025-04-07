@@ -2,8 +2,8 @@ package org.example
 
 class NaiveApproach {
 
-    fun run(lines: List<String>) {
-        lines.filter { it.contains("ERROR") }
+    fun run(lines: List<String>): String {
+        return lines.filter { it.contains("ERROR") }
             .map { it.split(",").first() }
             .groupingBy { it }
             .eachCount()

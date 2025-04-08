@@ -5,7 +5,7 @@ class SingleThreadedFinalApproach {
 
     fun run(lines: List<String>): String {
         val length = lines.size
-        val countPerIp = mutableMapOf<String, Long>()
+        val countPerIp = HashMap<String, Long>()
 
         for (i in 0 until length) {
             val typeIndex = lines[i].indexOf(ERROR, startIndex = 8)

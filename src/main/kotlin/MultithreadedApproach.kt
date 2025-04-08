@@ -1,6 +1,6 @@
 package org.example
 
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.math.min
@@ -11,17 +11,19 @@ class MultithreadedApproach() {
         val nCpu = Runtime.getRuntime().availableProcessors()
         val executorService = Executors.newFixedThreadPool(nCpu)
         val chunkRanges = chunkRanges(lines.size, nCpu)
-        val results = ConcurrentHashMap<String, Long>()
 
         try {
-            chunkRanges
-                .map { (start, end) ->
-                    executorService.submit(RunnerRunnable(start, end, lines, results))
+            val futures = chunkRanges.map { (start, end) ->
+                executorService.submit(RunnerCallable(start, end, lines))
+            }
+
+            val results = HashMap<String, Long>()
+            futures.forEach { future ->
+                val localCounts = future.get(1, TimeUnit.SECONDS)
+                localCounts.forEach { (ip, count) ->
+                    results.merge(ip, count) { a, b -> a + b }
                 }
-                .toList()
-                .forEach { future ->
-                    future.get(1, TimeUnit.SECONDS)
-                }
+            }
 
             return results.maxBy { it.value }.key
         } finally {
@@ -48,14 +50,14 @@ class MultithreadedApproach() {
         }
     }
 
-    private class RunnerRunnable(
+    private class RunnerCallable(
         private val start: Int,
         private val end: Int,
-        private val lines: List<String>,
-        private val results: ConcurrentHashMap<String, Long>
-    ) : Runnable {
-        override fun run() {
-            val localCounts = mutableMapOf<String, Long>()
+        private val lines: List<String>
+    ) : Callable<Map<String, Long>> {
+
+        override fun call(): Map<String, Long> {
+            val localCounts = HashMap<String, Long>()
 
             for (i in start..end) {
                 val line = lines[i]
@@ -66,9 +68,7 @@ class MultithreadedApproach() {
                 }
             }
 
-            localCounts.forEach { (ip, count) ->
-                results.merge(ip, count, Long::plus)
-            }
+            return localCounts
         }
     }
 }
